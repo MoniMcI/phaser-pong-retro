@@ -1,0 +1,178 @@
+let ball, leftPaddle, rightPaddle;
+let cursors, wKey, sKey;
+let leftScore = 0, rightScore = 0;
+let scoreText, instructionsText, gameOverText;
+const maxScore = 5;
+
+let hitSound, scoreSound, bgMusic, victorySound, applauseSound;
+
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    parent: 'game-container',
+    backgroundColor: "#3cb371", // verde cancha
+    physics: {
+        default: 'arcade',
+        arcade: { debug: false }
+    },
+    scene: { preload, create, update }
+};
+
+new Phaser.Game(config);
+
+function preload() {
+    // Cargar sonidos
+    //this.load.audio('bgm', 'assets/glitch.mp3');
+    this.load.audio('hit', 'assets/ping_pong_8bit_beeep.ogg');
+    this.load.audio('score', 'assets/8bitgame_entrance.wav');
+    this.load.audio('victory', 'assets/round_end.wav');
+    this.load.audio('applause', 'assets/applause.wav');
+}
+
+function create() {
+    // Asignar sonidos
+    console.log('Antes de agregar sonidos');
+    //bgMusic = this.sound.add('bgm', { volume: 0.9, loop: true });
+    //bgMusic.play();      
+    
+    hitSound = this.sound.add('hit');  
+    scoreSound = this.sound.add('score');
+    victorySound = this.sound.add('victory');
+    applauseSound = this.sound.add('applause');
+
+    console.log('Después de agregar sonidos');
+
+    //scoreSound = this.sound.add('score');
+
+    victorySound.on('complete', () => {
+        applauseSound.play();
+    });
+    // Fondo con líneas centrales (blancas)
+    for (let y = 0; y < 600; y += 40) {
+        this.add.rectangle(400, y, 4, 20, 0xffffff, 0.3);
+    }
+
+    // Generar texturas simples
+    const g = this.add.graphics();
+
+    // Pelota amarilla redonda
+    g.fillStyle(0xffff00, 1);
+    g.fillCircle(10, 10, 10);
+    g.generateTexture('ball', 20, 20);
+    g.clear();
+
+    // Paletas blancas
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(0, 0, 20, 100);
+    g.generateTexture('paddle', 20, 100);
+    g.destroy();
+
+    // Pelota
+    ball = this.physics.add.sprite(400, 300, 'ball');
+    ball.setCollideWorldBounds(false);
+    ball.setBounce(1, 1);
+    resetBall();
+
+    // Paletas
+    leftPaddle = this.physics.add.sprite(50, 300, 'paddle').setImmovable(true);
+    rightPaddle = this.physics.add.sprite(750, 300, 'paddle').setImmovable(true);
+
+    // Colisiones pelota-paletas
+    this.physics.add.collider(ball, leftPaddle, (ball, paddle) => {
+        let diff = ball.y - paddle.y;
+        let newY = diff * 5 + Phaser.Math.Between(-60, 60);
+        if (Math.abs(newY) < 50) newY = newY < 0 ? -50 : 50;
+        let speedX = Math.abs(ball.body.velocity.x);
+        ball.setVelocityX(speedX);
+        ball.setVelocityY(newY);
+
+        hitSound.play(); // solo suena al tocar paleta izquierda
+    });
+
+    this.physics.add.collider(ball, rightPaddle, (ball, paddle) => {
+        let diff = ball.y - paddle.y;
+        let newY = diff * 5 + Phaser.Math.Between(-60, 60);
+        if (Math.abs(newY) < 50) newY = newY < 0 ? -50 : 50;
+        let speedX = -Math.abs(ball.body.velocity.x);
+        ball.setVelocityX(speedX);
+        ball.setVelocityY(newY);
+
+        hitSound.play(); // solo suena al tocar paleta derecha
+    });
+
+    // Input
+    cursors = this.input.keyboard.createCursorKeys();
+    wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+    sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+
+    // Texto puntaje
+    scoreText = this.add.text(400, 20, '0 - 0', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5, 0);
+
+    // Texto instrucciones
+    instructionsText = this.add.text(200, 560, 'W/S: Jugador Izq | Flechas ↑/↓: Jugador Der', { fontSize: '18px', fill: '#fff' });
+
+    // Texto Game Over
+    gameOverText = this.add.text(400, 250, '', { fontSize: '48px', fill: '#ff3333' }).setOrigin(0.5, 0.5);
+}
+
+function update() {
+    if (leftScore >= maxScore || rightScore >= maxScore) {
+        ball.setVelocity(0, 0);
+        return;
+    }
+
+    // Movimiento paletas
+    leftPaddle.setVelocityY(wKey.isDown ? -300 : sKey.isDown ? 300 : 0);
+    rightPaddle.setVelocityY(cursors.up.isDown ? -300 : cursors.down.isDown ? 300 : 0);
+
+    // Limitar paletas al canvas
+    leftPaddle.y = Phaser.Math.Clamp(leftPaddle.y, 50, 550);
+    rightPaddle.y = Phaser.Math.Clamp(rightPaddle.y, 50, 550);
+
+    // Revisar puntos
+    if (ball.x < 0) {
+        rightScore++;
+        scoreSound.play();
+        updateScore();
+    } else if (ball.x > 800) {
+        leftScore++;
+        scoreSound.play();
+        updateScore();
+    }
+
+    // Rebote en Y (techo y piso)
+    if (ball.y < 10) {
+        ball.setVelocityY(Math.abs(ball.body.velocity.y));
+    }
+    if (ball.y > 590) {
+        ball.setVelocityY(-Math.abs(ball.body.velocity.y));
+    }
+}
+
+function resetBall() {
+    ball.setPosition(400, 300);
+    ball.setVelocity(0, 0);
+
+    setTimeout(() => {
+        let speedX = Phaser.Math.Between(150, 200);
+        let speedY = Phaser.Math.Between(-150, 150);
+        if (Math.abs(speedY) < 50) speedY = speedY < 0 ? -50 : 50;
+        let dir = Phaser.Math.Between(0, 1) === 0 ? 1 : -1;
+        ball.setVelocity(speedX * dir, speedY);
+    }, 1000);
+}
+
+function updateScore() {
+    scoreText.setText(leftScore + ' - ' + rightScore);
+
+    if (leftScore >= maxScore) {
+        gameOverText.setText('🏆 ¡Jugador Izquierda Gana!');
+        victorySound.play();
+    } else if (rightScore >= maxScore) {
+        gameOverText.setText('🏆 ¡Jugador Derecha Gana!');
+        victorySound.play();
+    } else {
+        resetBall();
+    }
+}
