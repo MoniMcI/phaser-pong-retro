@@ -22,4 +22,16 @@ El primero en llegar a 5 puntos gana la partida.
 - [Phaser 3](https://phaser.io/)  
 
 ## 🔗 Jugar online
-👉 [Abrir en GitHub Pages](https://TUUSUARIO.github.io/pong/) *(link se genera al activarlo)*
+👉 [Abrir en GitHub Pages](https://monimci.github.io/phaser-pong-retro/) 
+
+
+
+# 🎮 Pong Retro in Phaser
+
+A small project built with **Phaser 3**, recreating the classic retro game *Pong*.  
+Este proyecto lo hice para practicar desarrollo de videojuegos en JavaScript.  
+
+## 🚀 How to play
+- **Player 1 (left):** W (up) / S (down)  
+- **Player 2 (right):** Arrow ↑ / Arrow ↓  
+
